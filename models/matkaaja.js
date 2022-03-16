@@ -19,11 +19,9 @@ const MatkaajaSchema = mongoose.Schema({
   },
   paikkakunta: {
     type: String,
-    required: true,
   },
   esittely: {
     type: String,
-    required: true,
   },
   kuva: {
     type: String,
@@ -37,6 +35,7 @@ const MatkaajaSchema = mongoose.Schema({
     type: String,
     required: true,
   },
+  refreshToken: { type: String },
 });
 
 module.exports = mongoose.model('Matkaaja', MatkaajaSchema);
