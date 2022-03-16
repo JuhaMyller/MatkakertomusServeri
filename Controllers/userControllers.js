@@ -1,10 +1,26 @@
 const Matkaaja = require('../models/matkaaja');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+const reqParams = require('../utils/requestParams');
+const ErrorHandler = require('../utils/ErrorHandler');
 
 module.exports.register = async (req, res, next) => {
   try {
-    const { etunimi, sukunimi, paikkakunta } = req.body;
-    const { esittely, sposti, nimimerkki, salasana } = req.body;
+    const { etunimi, sukunimi, sposti, nimimerkki, salasana } = req.body;
+
+    const haveParams = reqParams(
+      {
+        etunimi,
+        sukunimi,
+        sposti,
+        nimimerkki,
+        salasana,
+      },
+      req.body
+    );
+
+    if (!haveParams) ErrorHandler(400, 'Params puuttuu');
 
     const user = await Matkaaja.findOne({
       $or: [{ sposti: sposti.toLowerCase() }, { nimimerkki: nimimerkki }],
@@ -23,8 +39,6 @@ module.exports.register = async (req, res, next) => {
     const uusiMatkaaja = new Matkaaja({
       etunimi: etunimi.charAt(0).toUpperCase() + etunimi.slice(1),
       sukunimi: sukunimi.charAt(0).toUpperCase() + sukunimi.slice(1),
-      paikkakunta: paikkakunta.charAt(0).toUpperCase() + paikkakunta.slice(1),
-      esittely,
       sposti: sposti.toLowerCase(),
       nimimerkki,
       salasana: hashPass,
@@ -32,13 +46,74 @@ module.exports.register = async (req, res, next) => {
 
     const response = await uusiMatkaaja.save();
 
-    console.log(response);
-
-    if (response) res.status(200).json({ message: 'OK' });
+    if (response) res.status(201).json({ message: 'OK' });
   } catch (error) {
-    if (!error.statusCode) {
-      error.statusCode = 500;
-    }
+    next(error);
+  }
+};
+module.exports.login = async (req, res, next) => {
+  try {
+    const { sposti, salasana } = req.body;
+
+    const haveParams = reqParams({ sposti, salasana }, req.body);
+
+    if (!haveParams) ErrorHandler(400, 'Params puuttuu');
+
+    const user = await Matkaaja.findOne({
+      sposti: sposti.toLowerCase(),
+    }).exec();
+
+    if (!user)
+      return res
+        .status(400)
+        .json({ message: 'Sposti tai salasana on virheellinen' });
+
+    const hashedPass = await bcrypt.compare(salasana, user.salasana);
+
+    if (!hashedPass)
+      return res
+        .status(400)
+        .json({ message: 'Sposti tai salasana on virheellinen' });
+
+    const accessToken = jwt.sign(
+      {
+        id: user.id,
+        sposti: user.sposti.toLowerCase(),
+      },
+      process.env.ACCESS_TOKEN_KEY,
+      { expiresIn: '8h' }
+    );
+    const refreshToken = jwt.sign(
+      {
+        id: user.id,
+        sposti: user.sposti.toLowerCase(),
+      },
+      process.env.REFRESH_TOKEN_KEY,
+      { expiresIn: '7d' }
+    );
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.cookie('refreshToken', refreshToken, {
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+      httpOnly: true,
+    });
+
+    res.status(200).json({
+      message: 'OK',
+      user: {
+        etunimi: user.etunimi,
+        sukunimi: user.sukunimi,
+        sposti: user.sposti,
+        nimimerkki: user.nimimerkki,
+        kuva: user.kuva,
+        esittely: user.esittely,
+        paikkakunta: user.paikkakunta,
+      },
+      accessToken,
+    });
+  } catch (error) {
     next(error);
   }
 };

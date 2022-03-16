@@ -5,12 +5,6 @@ const userController = require('../Controllers/userControllers');
 //http://localhost:3000/api/user
 
 router.post('/register', userController.register);
+router.post('/login', userController.login);
 
 module.exports = router;
-
-// axios.post('http://localhost:3000/api/user', {
-//     username: "Marek",
-//     password: "Markkumies"
-// });
-
-// axios.get('http://localhost:3000/api/user?username=Marek&password=markkumies');
