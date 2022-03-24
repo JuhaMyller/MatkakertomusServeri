@@ -36,6 +36,10 @@ const MatkaajaSchema = mongoose.Schema({
     required: true,
   },
   refreshToken: { type: String },
+  palautaSposti: {
+    token: { type: String },
+    expiresAt: { type: Date },
+  },
 });
 
 module.exports = mongoose.model('Matkaaja', MatkaajaSchema);
