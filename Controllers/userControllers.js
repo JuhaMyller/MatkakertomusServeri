@@ -7,8 +7,7 @@ const ErrorHandler = require('../utils/ErrorHandler');
 const { validationResult } = require('express-validator');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
-const fs = require('fs');
-const path = require('path');
+const { s3Client } = require('../utils/AWS_s3');
 
 module.exports.register = async (req, res, next) => {
   try {
@@ -326,31 +325,26 @@ module.exports.changeProfilePic = async (req, res, next) => {
     if (!req.file) ErrorHandler(400, 'Kuvatiedosto puuttuu');
 
     const user = await Matkaaja.findById(req.userID);
-    console.log(req.file);
-    //Jos kuva on jo olemassa edellinen täytyy poistaa
+
+    //Jos edellinen kuva on olemassa se poistetaan
     if (user.kuva) {
-      let imgPath = path.join(__dirname, '..', 'uploads', user.kuva);
-      await fs.unlink(imgPath, async (err) => {
-        //Jos vanhaa kuvaa ei jostain syystä voida poistaa ei vaihdeta uutta kuvaa tilalle vaan se poistetaan
-        if (err) {
-          imgPath = path.join(__dirname, '..', 'uploads', req.file.filename);
-          await fs.unlink(imgPath, (err) => {
-            console.err(err);
-          });
-          ErrorHandler(500, 'Kuvan poistaminen epäonnistui' + err);
-        }
-      });
+      const params = {
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: user.kuva.nimi,
+      };
+      await s3Client.deleteObject(params).promise();
     }
 
-    user.kuva = `${req.file.filename}`;
+    user.kuva.nimi = req.file['key'];
+    user.kuva.path = req.file['location'];
     await user.save();
 
-    //palautetaan kuva serverille
+    //palautetaan kuva clientille
     res.status(200).json({
       message: 'OK',
       kuva: {
-        path: `${process.env.SERVER_URL}/uploads/${req.file.filename}`,
-        name: req.file.filename,
+        nimi: req.file['key'],
+        path: req.file['location'],
       },
     });
   } catch (error) {

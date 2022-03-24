@@ -41,7 +41,7 @@ router.put(
 router.post(
   '/setprofilepic',
   requireAuth,
-  multer.array('kuva', 1),
+  multer.single('kuva'),
   userController.changeProfilePic
 );
 
