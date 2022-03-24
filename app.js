@@ -7,6 +7,8 @@ const ErrorHandler = require('./middleware/errorHandler');
 const userRoutes = require('./Route/userRoute');
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static('uploads'));
 
 //http://localhost:4000/
 
@@ -19,8 +21,11 @@ app.use('/privateRoute', requireAuth, (req, res) => {
 
 app.use(ErrorHandler);
 
-mongoose.connect(process.env.DB_CONNECTION_STRING).then(() => {
-  console.log('Yhdistetty databaseen');
-});
+mongoose
+  .connect(process.env.DB_CONNECTION_STRING)
+  .then(() => {
+    console.log('Yhdistetty databaseen');
+  })
+  .catch((err) => console.error(err));
 
 module.exports = app;

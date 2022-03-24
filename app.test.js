@@ -163,7 +163,7 @@ describe('RequireAuth Testi', function () {
   });
 });
 // <----------------------------------------->
-// /api/user/muokkaatietoja
+// /api/user/editprofile
 // <----------------------------------------->
 
 describe('PUT /api/user/editprofile', function () {
@@ -191,6 +191,44 @@ describe('PUT /api/user/editprofile', function () {
     expect(response.body.user.etunimi).toEqual(user.etunimi);
     expect(response.body.user.sukunimi).toEqual(user.sukunimi);
     expect(response.body.user.esittely).toEqual(user.esittely);
+  });
+});
+
+// <----------------------------------------->
+// /api/user/changepassword
+// <----------------------------------------->
+
+describe('PUT Vaihda salasana', function () {
+  it('Virhe: liian lyhyt salasana', async () => {
+    const response = await supertest(app)
+      .put('/api/user/changepassword')
+      .send({ salasana: 'aaaa', uusiSalasana: 'bbbb' })
+      .set('Accept', 'application/json')
+      .auth(accessToken, { type: 'bearer' });
+    expect(response.headers['content-type']).toMatch(/json/);
+    expect(response.status).toEqual(400);
+    expect(response.body.message).toEqual(
+      'Salasanan täytyy olla 5-15 merkkiä pitkä'
+    );
+  });
+  it('Virhe: väärä salasana', async () => {
+    const response = await supertest(app)
+      .put('/api/user/changepassword')
+      .send({ salasana: 'bbbbbbb', uusiSalasana: 'aaaaaa' })
+      .set('Accept', 'application/json')
+      .auth(accessToken, { type: 'bearer' });
+    expect(response.headers['content-type']).toMatch(/json/);
+    expect(response.status).toEqual(400);
+    expect(response.body.message).toEqual('Salasana on virheellinen');
+  });
+  it('Vaihda salasana', async () => {
+    const response = await supertest(app)
+      .put('/api/user/changepassword')
+      .send({ salasana: 'aaaaaa', uusiSalasana: 'bbbbb' })
+      .set('Accept', 'application/json')
+      .auth(accessToken, { type: 'bearer' });
+    expect(response.headers['content-type']).toMatch(/json/);
+    expect(response.status).toEqual(200);
   });
 });
 

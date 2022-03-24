@@ -3,7 +3,7 @@ const router = Router();
 const userController = require('../Controllers/userControllers');
 const { body } = require('express-validator');
 const requireAuth = require('../middleware/requireAuth');
-
+const multer = require('../middleware/multerS3');
 //http://localhost:4000/api/user
 
 router.post(
@@ -27,6 +27,22 @@ router.put(
     .isLength({ min: 5, max: 15 })
     .withMessage('Salasanan täytyy olla 5-15 merkkiä pitkä'),
   userController.changePassword
+);
+
+router.post('/sendresetpassemail', userController.sendResetPasswordEmail);
+router.put(
+  '/resetpasstoken',
+  body('salasana')
+    .isLength({ min: 5, max: 15 })
+    .withMessage('Salasanan täytyy olla 5-15 merkkiä pitkä'),
+  userController.resetPasswordToken
+);
+
+router.post(
+  '/setprofilepic',
+  requireAuth,
+  multer.array('kuva', 1),
+  userController.changeProfilePic
 );
 
 module.exports = router;

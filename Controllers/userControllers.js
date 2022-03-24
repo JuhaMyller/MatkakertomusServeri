@@ -5,6 +5,10 @@ require('dotenv').config();
 const reqParams = require('../utils/requestParams');
 const ErrorHandler = require('../utils/ErrorHandler');
 const { validationResult } = require('express-validator');
+const crypto = require('crypto');
+const sendEmail = require('../utils/sendEmail');
+const fs = require('fs');
+const path = require('path');
 
 module.exports.register = async (req, res, next) => {
   try {
@@ -75,7 +79,6 @@ module.exports.register = async (req, res, next) => {
 module.exports.login = async (req, res, next) => {
   try {
     const { sposti, salasana } = req.body;
-
     const haveParams = reqParams({ sposti, salasana }, req.body);
 
     if (!haveParams) ErrorHandler(400, 'Params puuttuu');
@@ -128,7 +131,10 @@ module.exports.login = async (req, res, next) => {
         sukunimi: user.sukunimi,
         sposti: user.sposti,
         nimimerkki: user.nimimerkki,
-        kuva: user.kuva,
+        kuva: {
+          path: `${process.env.SERVER_URL}/uploads/${user.kuva}`,
+          name: user.kuva,
+        },
         esittely: user.esittely,
         paikkakunta: user.paikkakunta,
       },
@@ -200,7 +206,7 @@ module.exports.changePassword = async (req, res, next) => {
     if (!haveParams) ErrorHandler(400, 'Params puuttuu');
 
     //etsitään käyttäjä requireAuth middlewaren antamasta id:stä joka otettiin JWT
-    const user = await Matkaaja.findById(req.userID);
+    const user = await Matkaaja.findById(req.userID).exec();
     //vertaillaan tietokannassa olevaa salasanaa requestissa olevaan salasanaan
     const hashedPass = await bcrypt.compare(salasana, user.salasana);
 
@@ -214,6 +220,138 @@ module.exports.changePassword = async (req, res, next) => {
 
     res.status(200).json({
       message: 'OK',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports.sendResetPasswordEmail = async (req, res, next) => {
+  try {
+    const { sposti } = req.body;
+
+    const haveParams = reqParams({ sposti }, req.body);
+
+    if (!haveParams) ErrorHandler(400, 'Params puuttuu');
+
+    //Etsitään onko käyttäjä olemassa
+    const user = await Matkaaja.findOne({
+      sposti: sposti.toLowerCase(),
+    }).exec();
+
+    if (!user) {
+      return res.status(400).json({
+        message: 'Sähköpostia ei ole olemassa',
+      });
+    }
+
+    //Luodaan palautusavain spostille
+    const token = crypto.randomBytes(48).toString('hex');
+
+    //Tokeni on voimassa tunnin ajan
+    const date = new Date();
+    date.setHours(date.getHours() + 1);
+    //Annetaan käyttäjälle token ja päättymisaika
+    user.palautaSposti.token = token;
+    user.palautaSposti.expiresAt = date;
+    const saveToken = await user.save();
+    //Varmistetaan että käyttäjälle tallennettiin tiedot
+    if (!saveToken) ErrorHandler(500, 'Server error');
+    //Luodaan viesti joka lähetetään spostiin => viestissä on linkki frontendiin palauta salasana sivulle. Frontedissä luetaan querysta token ja sposti
+    const message = `Salasanan palautuslinkki http://localhost:3000/palautasalasana?token=${token}&email=${user.sposti} \nPalautuslinkki on voimassa tunnin`;
+    //Lähetetään sposti utils kansioon luodulla functiolla
+    await sendEmail(user.sposti, message);
+
+    res.status(200).json({
+      message: 'OK',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports.resetPasswordToken = async (req, res, next) => {
+  try {
+    const { sposti, salasana, token } = req.body;
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return ErrorHandler(400, errors.array());
+    }
+
+    const haveParams = reqParams({ sposti, salasana, token }, req.body);
+
+    if (!haveParams) ErrorHandler(400, 'Params puuttuu');
+    //Etsitään käyttäjä spostin perusteella
+    const user = await Matkaaja.findOne({ sposti: sposti.toLowerCase() });
+    if (!user)
+      return res.status(400).json({
+        message: 'Virheellinen sposti ja token yhdistelmä',
+      });
+
+    //Tarkistetaan onko clientiltä saatu token sama kuin tietokannassa käyttäjällä
+    if (user.palautaSposti['token'] !== token)
+      return res.status(400).json({
+        message: 'Virheellinen sposti ja token yhdistelmä',
+      });
+    const date = new Date();
+    //Jos token on vanhentunut poistetaan token ja aika ja ei tehdä muutoksia salasanaan
+    if (date > user.palautaSposti['expiresAt']) {
+      user.palautaSposti.token = undefined;
+      user.palautaSposti.expiresAt = undefined;
+      await user.save();
+      return res.status(400).json({
+        message: 'Token on vanhentunut',
+      });
+    }
+
+    //Hashataan salasana ja tallennetaan käyttäjälle uusi salasana
+    //ja poistetaan käyttäjältä token
+    const hashPass = await bcrypt.hash(salasana, 10);
+
+    user.salasana = hashPass;
+    user.palautaSposti.token = undefined;
+    user.palautaSposti.expiresAt = undefined;
+    await user.save();
+
+    res.status(200).json({
+      message: 'OK',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports.changeProfilePic = async (req, res, next) => {
+  try {
+    if (!req.file) ErrorHandler(400, 'Kuvatiedosto puuttuu');
+
+    const user = await Matkaaja.findById(req.userID);
+    console.log(req.file);
+    //Jos kuva on jo olemassa edellinen täytyy poistaa
+    if (user.kuva) {
+      let imgPath = path.join(__dirname, '..', 'uploads', user.kuva);
+      await fs.unlink(imgPath, async (err) => {
+        //Jos vanhaa kuvaa ei jostain syystä voida poistaa ei vaihdeta uutta kuvaa tilalle vaan se poistetaan
+        if (err) {
+          imgPath = path.join(__dirname, '..', 'uploads', req.file.filename);
+          await fs.unlink(imgPath, (err) => {
+            console.err(err);
+          });
+          ErrorHandler(500, 'Kuvan poistaminen epäonnistui' + err);
+        }
+      });
+    }
+
+    user.kuva = `${req.file.filename}`;
+    await user.save();
+
+    //palautetaan kuva serverille
+    res.status(200).json({
+      message: 'OK',
+      kuva: {
+        path: `${process.env.SERVER_URL}/uploads/${req.file.filename}`,
+        name: req.file.filename,
+      },
     });
   } catch (error) {
     next(error);
