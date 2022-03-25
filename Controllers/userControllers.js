@@ -281,7 +281,9 @@ module.exports.resetPasswordToken = async (req, res, next) => {
 
     if (!haveParams) ErrorHandler(400, 'Params puuttuu');
     //Etsitään käyttäjä spostin perusteella
-    const user = await Matkaaja.findOne({ sposti: sposti.toLowerCase() });
+    const user = await Matkaaja.findOne({
+      sposti: sposti.toLowerCase(),
+    }).exec();
     if (!user)
       return res.status(400).json({
         message: 'Virheellinen sposti ja token yhdistelmä',
@@ -295,8 +297,7 @@ module.exports.resetPasswordToken = async (req, res, next) => {
     const date = new Date();
     //Jos token on vanhentunut poistetaan token ja aika ja ei tehdä muutoksia salasanaan
     if (date > user.palautaSposti['expiresAt']) {
-      user.palautaSposti.token = undefined;
-      user.palautaSposti.expiresAt = undefined;
+      user.palautaSposti = undefined;
       await user.save();
       return res.status(400).json({
         message: 'Token on vanhentunut',
@@ -308,8 +309,7 @@ module.exports.resetPasswordToken = async (req, res, next) => {
     const hashPass = await bcrypt.hash(salasana, 10);
 
     user.salasana = hashPass;
-    user.palautaSposti.token = undefined;
-    user.palautaSposti.expiresAt = undefined;
+    user.palautaSposti = undefined;
     await user.save();
 
     res.status(200).json({
@@ -324,10 +324,10 @@ module.exports.changeProfilePic = async (req, res, next) => {
   try {
     if (!req.file) ErrorHandler(400, 'Kuvatiedosto puuttuu');
 
-    const user = await Matkaaja.findById(req.userID);
+    const user = await Matkaaja.findById(req.userID).exec();
 
     //Jos edellinen kuva on olemassa se poistetaan
-    if (user.kuva) {
+    if (user?.kuva?.nimi) {
       const params = {
         Bucket: process.env.AWS_BUCKET_NAME,
         Key: user.kuva.nimi,
@@ -346,6 +346,57 @@ module.exports.changeProfilePic = async (req, res, next) => {
         nimi: req.file['key'],
         path: req.file['location'],
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports.removeProfilePic = async (req, res, next) => {
+  try {
+    const user = await Matkaaja.findById(req.userID).exec();
+
+    if (!user.kuva.nimi) {
+      return res.status(404).json({
+        message: 'Kuvaa ei löytynyt',
+      });
+    }
+    //Jos kuva on olemassa se poistetaan
+
+    const params = {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: user.kuva.nimi,
+    };
+    await s3Client.deleteObject(params).promise();
+
+    user.kuva = undefined;
+
+    await user.save();
+
+    res.status(200).json({
+      message: 'OK',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports.logout = async (req, res, next) => {
+  try {
+    const user = await Matkaaja.findById(req.userID).exec();
+
+    if (!user) ErrorHandler(404, 'Käyttäjää ei löytynyt');
+
+    user.refreshToken = undefined;
+    await user.save();
+
+    res.cookie('refreshToken', '', {
+      maxAge: 1000,
+      httpOnly: true,
+    });
+
+    res.status(200).json({
+      message: 'OK',
     });
   } catch (error) {
     next(error);
