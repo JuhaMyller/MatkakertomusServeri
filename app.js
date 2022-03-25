@@ -4,20 +4,16 @@ require('dotenv').config();
 const app = express();
 const requireAuth = require('./middleware/requireAuth');
 const ErrorHandler = require('./middleware/errorHandler');
-const userRoutes = require('./Route/userRoute');
+const userRoutes = require('./Routes/userRoutes');
+const matkakohdeRoutes = require('./Routes/matkakohteetRoutes');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static('uploads'));
 
 //http://localhost:4000/
 
 app.use('/api/user', userRoutes);
-
-//testiroute
-app.use('/privateRoute', requireAuth, (req, res) => {
-  res.status(200).json({ userid: req.userID, sposti: req.sposti });
-});
+app.use('/api/matkakohde', matkakohdeRoutes);
 
 app.use(ErrorHandler);
 
