@@ -7,6 +7,9 @@ const cors = require('cors');
 const ErrorHandler = require('./middleware/errorHandler');
 const userRoutes = require('./Routes/userRoutes');
 const matkakohdeRoutes = require('./Routes/matkakohteetRoutes');
+const tarinaRoutes = require('./Routes/tarinatRoutes');
+
+const { getFileStream } = require('./utils/AWS_s3');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -16,7 +19,14 @@ app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 //http://localhost:4000/
 
 app.use('/api/user', userRoutes);
+app.use('/api/tarina', requireAuth, tarinaRoutes);
 app.use('/api/matkakohde', matkakohdeRoutes);
+
+//Lataa kuvan clientille
+app.get('/img/:key', (req, res) => {
+  const key = req.params.key;
+  getFileStream(key, res);
+});
 
 app.use(ErrorHandler);
 
