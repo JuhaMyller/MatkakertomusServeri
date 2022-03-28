@@ -7,7 +7,7 @@ const ErrorHandler = require('../utils/ErrorHandler');
 const { validationResult } = require('express-validator');
 const crypto = require('crypto');
 const sendEmail = require('../utils/sendEmail');
-const { s3Client } = require('../utils/AWS_s3');
+const { deleteFile, upload } = require('../utils/AWS_s3');
 
 module.exports.register = async (req, res, next) => {
   try {
@@ -130,10 +130,7 @@ module.exports.login = async (req, res, next) => {
         sukunimi: user.sukunimi,
         sposti: user.sposti,
         nimimerkki: user.nimimerkki,
-        kuva: {
-          path: `${process.env.SERVER_URL}/uploads/${user.kuva}`,
-          name: user.kuva,
-        },
+        kuva: user.kuva,
         esittely: user.esittely,
         paikkakunta: user.paikkakunta,
       },
@@ -325,27 +322,21 @@ module.exports.changeProfilePic = async (req, res, next) => {
     if (!req.file) ErrorHandler(400, 'Kuvatiedosto puuttuu');
 
     const user = await Matkaaja.findById(req.userID).exec();
-
     //Jos edellinen kuva on olemassa se poistetaan
-    if (user?.kuva?.nimi) {
-      const params = {
-        Bucket: process.env.AWS_BUCKET_NAME,
-        Key: user.kuva.nimi,
-      };
-      await s3Client.deleteObject(params).promise();
+    if (user?.kuva) {
+      await deleteFile([{ Key: user.kuva }]);
     }
 
-    user.kuva.nimi = req.file['key'];
-    user.kuva.path = req.file['location'];
+    await upload(req.file);
+
+    user.kuva = req.file['filename'];
+
     await user.save();
 
     //palautetaan kuva clientille
     res.status(200).json({
       message: 'OK',
-      kuva: {
-        nimi: req.file['key'],
-        path: req.file['location'],
-      },
+      kuva: req.file['filename'],
     });
   } catch (error) {
     next(error);
@@ -356,18 +347,14 @@ module.exports.removeProfilePic = async (req, res, next) => {
   try {
     const user = await Matkaaja.findById(req.userID).exec();
 
-    if (!user.kuva.nimi) {
+    if (!user.kuva) {
       return res.status(404).json({
         message: 'Kuvaa ei löytynyt',
       });
     }
     //Jos kuva on olemassa se poistetaan
 
-    const params = {
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: user.kuva.nimi,
-    };
-    await s3Client.deleteObject(params).promise();
+    await deleteFile([{ Key: user.kuva }]);
 
     user.kuva = undefined;
 

@@ -3,7 +3,7 @@ const router = Router();
 const userController = require('../Controllers/userControllers');
 const { body } = require('express-validator');
 const requireAuth = require('../middleware/requireAuth');
-const multer = require('../middleware/multerS3');
+const multer = require('../middleware/multer');
 //http://localhost:4000/api/user
 
 router.post(

@@ -24,8 +24,7 @@ const MatkaajaSchema = mongoose.Schema({
     type: String,
   },
   kuva: {
-    nimi: { type: String },
-    path: { type: String },
+    type: String,
   },
   sposti: {
     type: String,
