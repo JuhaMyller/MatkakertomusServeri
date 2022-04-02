@@ -48,9 +48,7 @@ module.exports.uusiMatkakohde = async (req, res, next) => {
 
 module.exports.matkakohteet = async (req, res, next) => {
   try {
-    const matkakohteet = await Matkakohde.find()
-      .select('kuva kohdenimi maa')
-      .exec();
+    const matkakohteet = await Matkakohde.find().exec();
 
     res.status(200).json({ message: 'OK', matkakohteet });
   } catch (error) {
@@ -70,6 +68,15 @@ module.exports.matkakohteetID = async (req, res, next) => {
     if (!matkakohteet) return ErrorHandler(400, 'Virheellinen id');
 
     res.status(200).json({ message: 'OK', matkakohteet });
+  } catch (error) {
+    next(error);
+  }
+};
+module.exports.muokkaaMatkakohdetta = async (req, res, next) => {
+  try {
+    const { kohdenimi, maa, paikkakunta, id, kuvateksti } = req.body;
+
+    res.status(200).json({});
   } catch (error) {
     next(error);
   }

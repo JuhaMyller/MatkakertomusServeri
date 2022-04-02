@@ -16,4 +16,6 @@ router.get('/matkakohteet', matkakohteetControllers.matkakohteet);
 //pitäisi myöhemmin palauttaa matkakohde sekä siihen liitetyt tarinat
 router.get('/matkakohteet/:id', matkakohteetControllers.matkakohteetID);
 
+router.put('/matkakohteet', matkakohteetControllers.muokkaaMatkakohdetta);
+
 module.exports = router;
