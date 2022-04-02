@@ -51,5 +51,6 @@ router.delete(
 );
 
 router.post('/logout', requireAuth, userController.logout);
+router.get('/refreshAccessToken', userController.refreshToken);
 
 module.exports = router;

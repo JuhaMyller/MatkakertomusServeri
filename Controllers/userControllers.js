@@ -389,3 +389,62 @@ module.exports.logout = async (req, res, next) => {
     next(error);
   }
 };
+
+module.exports.refreshToken = async (req, res, next) => {
+  try {
+    const cookies = req.cookies;
+    if (!cookies?.refreshToken)
+      return res.status(401).json({ message: 'Refreshtoken puuttuu' });
+
+    const refreshToken = cookies.refreshToken;
+
+    const user = await Matkaaja.findOne({ refreshToken: refreshToken }).exec();
+    if (!user) {
+      res.clearCookie('refreshToken', {
+        maxAge: 1,
+        httpOnly: true,
+      });
+      return res
+        .status(403)
+        .json({ message: 'Antamaa refreshtokenia ei löytynyt' });
+    }
+
+    jwt.verify(
+      user.refreshToken,
+      process.env.REFRESH_TOKEN_KEY,
+      async (err, decoded) => {
+        if (err || user.id !== decoded.id) {
+          user.refreshToken = undefined;
+          await user.save();
+          return res.status(403).json({ message: 'Virheellinen token' });
+        }
+        // req.userID = decoded.id;
+
+        const accessToken = jwt.sign(
+          {
+            sposti: decoded.sposti,
+            id: decoded.id,
+          },
+          process.env.ACCESS_TOKEN_KEY,
+          { expiresIn: '8h' }
+        );
+
+        res.status(200).json({
+          message: 'OK',
+          user: {
+            etunimi: user.etunimi,
+            sukunimi: user.sukunimi,
+            sposti: user.sposti,
+            nimimerkki: user.nimimerkki,
+            kuva: user.kuva,
+            esittely: user.esittely,
+            paikkakunta: user.paikkakunta,
+          },
+          accessToken,
+        });
+      }
+    );
+  } catch (err) {
+    next(err);
+  }
+};
