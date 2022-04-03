@@ -383,6 +383,8 @@ module.exports.logout = async (req, res, next) => {
     res.cookie('refreshToken', '', {
       maxAge: 1000,
       httpOnly: true,
+      sameSite: 'none',
+      secure: true,
     });
 
     res.status(200).json({
