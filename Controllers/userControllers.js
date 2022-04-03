@@ -122,6 +122,8 @@ module.exports.login = async (req, res, next) => {
     res.cookie('refreshToken', refreshToken, {
       maxAge: 1000 * 60 * 60 * 24 * 7,
       httpOnly: true,
+      sameSite: 'none',
+      secure: true,
     });
 
     res.status(200).json({
