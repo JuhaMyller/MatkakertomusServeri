@@ -60,10 +60,7 @@ module.exports.matkakohteetID = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!id) return ErrorHandler(400, 'ID puuttuu');
-    const matkakohteet = await Matkakohde.findById(id)
-      .populate('tarinat.tarina')
-      .select()
-      .exec();
+    const matkakohteet = await Matkakohde.findById(id).select().exec();
 
     if (!matkakohteet) return ErrorHandler(400, 'Virheellinen id');
 
