@@ -17,10 +17,15 @@ const Matkakohde = mongoose.Schema({
     type: String,
     required: true,
   },
-
   kuva: {
     type: String,
   },
+  tarinat: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tarina',
+    },
+  ],
 });
 
 module.exports = mongoose.model('Matkakohde', Matkakohde);

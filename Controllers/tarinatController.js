@@ -17,9 +17,10 @@ module.exports.uusiTarina = async (req, res, next) => {
     if (!haveParams) ErrorHandler(400, 'Params puuttuu');
 
     //Halutaan tarkistaa onko Matkakohdetta olemassa
-    const exists = await Matkakohde.exists({ _id: matkakohde });
+    const matkakohdeExists = await Matkakohde.findById(matkakohde);
 
-    if (!exists) return ErrorHandler(400, 'Matkakohdetta ei ole olemassa');
+    if (!matkakohdeExists)
+      return ErrorHandler(400, 'Matkakohdetta ei ole olemassa');
 
     const tarinaImgs = [];
 
@@ -39,6 +40,8 @@ module.exports.uusiTarina = async (req, res, next) => {
     });
 
     const savedTarina = await tarina.save();
+    matkakohdeExists.tarinat.push(savedTarina.id);
+    await matkakohdeExists.save();
 
     res.status(201).json({ message: 'OK', savedTarina });
   } catch (error) {

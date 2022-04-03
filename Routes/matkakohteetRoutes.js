@@ -22,4 +22,6 @@ router.get(
 
 router.put('/matkakohteet', matkakohteetControllers.muokkaaMatkakohdetta);
 
+router.delete('/matkakohde/:id');
+
 module.exports = router;
