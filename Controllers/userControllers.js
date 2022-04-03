@@ -15,7 +15,8 @@ module.exports.register = async (req, res, next) => {
     //toimii userRoutes kansiossa register routessa
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return ErrorHandler(400, errors.array());
+      const err = errors.array().map((e) => e.msg);
+      return ErrorHandler(400, err);
     }
     const { etunimi, sukunimi, sposti, nimimerkki, salasana } = req.body;
 
@@ -104,7 +105,7 @@ module.exports.login = async (req, res, next) => {
         sposti: user.sposti.toLowerCase(),
       },
       process.env.ACCESS_TOKEN_KEY,
-      { expiresIn: '8h' }
+      { expiresIn: '15m' }
     );
     const refreshToken = jwt.sign(
       {
@@ -112,7 +113,7 @@ module.exports.login = async (req, res, next) => {
         sposti: user.sposti.toLowerCase(),
       },
       process.env.REFRESH_TOKEN_KEY,
-      { expiresIn: '7d' }
+      { expiresIn: '8h' }
     );
 
     user.refreshToken = refreshToken;
@@ -414,6 +415,10 @@ module.exports.refreshToken = async (req, res, next) => {
       process.env.REFRESH_TOKEN_KEY,
       async (err, decoded) => {
         if (err || user.id !== decoded.id) {
+          res.clearCookie('refreshToken', {
+            maxAge: 1,
+            httpOnly: true,
+          });
           user.refreshToken = undefined;
           await user.save();
           return res.status(403).json({ message: 'Virheellinen token' });
@@ -426,7 +431,7 @@ module.exports.refreshToken = async (req, res, next) => {
             id: decoded.id,
           },
           process.env.ACCESS_TOKEN_KEY,
-          { expiresIn: '8h' }
+          { expiresIn: '15m' }
         );
 
         res.status(200).json({
