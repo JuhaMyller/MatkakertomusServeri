@@ -49,15 +49,58 @@ module.exports.uusiTarina = async (req, res, next) => {
   }
 };
 
-module.exports.tarinatID = async (req, res, next) => {
+module.exports.kaikkiTarinat = async (req, res, next) => {
+  try {
+    const tarinat = await Tarina.find({ yksityinen: false }).exec();
+
+    res.status(200).json({ tarinat });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports.tarinaID = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!id) return ErrorHandler(400, 'ID puuttuu');
-    const tarina = await Matkakohde.findById(id).exec();
+    const tarina = await Tarina.findById(id).exec();
+
+    if (!tarina) return ErrorHandler(400, 'Virheellinen id');
+
+    if (tarina.yksityinen && tarina.matkaaja.id.toString('hex') !== req.userID)
+      return res
+        .status(400)
+        .json({ message: 'Sinulla ei ole oikeutta katsoa tätä tarinaa' });
+
+    res.status(200).json({ message: 'OK', tarina });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports.matkakohteenTarinat = async (req, res, next) => {
+  try {
+    const { matkakohdeID } = req.params;
+    if (!matkakohdeID) return ErrorHandler(400, 'ID puuttuu');
+    const tarina = await Tarina.find({
+      matkakohde: matkakohdeID,
+      yksityinen: false,
+    }).exec();
 
     if (!tarina) return ErrorHandler(400, 'Virheellinen id');
 
     res.status(200).json({ message: 'OK', tarina });
+  } catch (error) {
+    next(error);
+  }
+};
+module.exports.omatTarinat = async (req, res, next) => {
+  try {
+    const tarinat = await Tarina.find({
+      matkaaja: req.userID,
+    }).exec();
+
+    res.status(200).json({ tarinat });
   } catch (error) {
     next(error);
   }
