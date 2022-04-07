@@ -2,7 +2,7 @@ const Matkakohde = require('../models/matkakohde');
 require('dotenv').config();
 const reqParams = require('../utils/requestParams');
 const ErrorHandler = require('../utils/ErrorHandler');
-const { upload } = require('../utils/AWS_s3');
+const { upload, deleteFile } = require('../utils/AWS_s3');
 
 module.exports.uusiMatkakohde = async (req, res, next) => {
   try {
@@ -74,6 +74,27 @@ module.exports.muokkaaMatkakohdetta = async (req, res, next) => {
     const { kohdenimi, maa, paikkakunta, id, kuvateksti } = req.body;
 
     res.status(200).json({});
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports.poistaMatkakohde = async (req, res, next) => {
+  const { id } = req.params;
+
+  try {
+    if (!id) ErrorHandler(400, 'Id puuttuu');
+
+    const matkakohde = await Matkakohde.findById(id);
+
+    if (!matkakohde) ErrorHandler(400, 'Matkakohdetta ei ole olemassa');
+    if (matkakohde.tarinat.length !== 0)
+      ErrorHandler(400, 'Matkakohteella on tarinoita');
+
+    const remove = await matkakohde.remove();
+    await deleteFile([{ Key: matkakohde.kuva }]);
+
+    res.status(200).json({ matkakohde: remove.id });
   } catch (error) {
     next(error);
   }
