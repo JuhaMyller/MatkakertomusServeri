@@ -18,7 +18,10 @@ const TarinaSchema = mongoose.Schema({
     type: String,
     required: true,
   },
-
+  otsikko: {
+    type: String,
+    required: true,
+  },
   kuva: [{ type: String }],
 });
 
