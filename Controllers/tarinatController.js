@@ -66,7 +66,10 @@ module.exports.tarinaID = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!id) return ErrorHandler(400, 'ID puuttuu');
-    const tarina = await Tarina.findById(id).exec();
+    const tarina = await Tarina.findById(id)
+      .select('otsikko teksti createdAt kuva lukukertoja ')
+      .populate('matkaaja', 'etunimi sukunimi kuva')
+      .exec();
 
     if (!tarina) return ErrorHandler(400, 'Virheellinen id');
 
