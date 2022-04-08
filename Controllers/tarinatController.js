@@ -16,7 +16,6 @@ module.exports.uusiTarina = async (req, res, next) => {
     );
     if (!haveParams) ErrorHandler(400, 'Params puuttuu');
 
-    //Halutaan tarkistaa onko Matkakohdetta olemassa
     const matkakohdeExists = await Matkakohde.findById(matkakohde);
 
     if (!matkakohdeExists)
