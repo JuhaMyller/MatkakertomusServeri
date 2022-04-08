@@ -107,7 +107,10 @@ module.exports.omatTarinat = async (req, res, next) => {
   try {
     const tarinat = await Tarina.find({
       matkaaja: req.userID,
-    }).exec();
+    })
+      .populate('matkaaja', 'nimimerkki')
+      .select('otsikko teksti alkupvm loppupvm createdAt')
+      .exec();
 
     res.status(200).json({ tarinat });
   } catch (error) {
