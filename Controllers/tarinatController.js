@@ -7,7 +7,9 @@ const { upload } = require('../utils/AWS_s3');
 module.exports.uusiTarina = async (req, res, next) => {
   try {
     const { matkakohde, yksityinen, teksti } = req.body;
-    const { alkupvm, loppupvm } = req.body;
+    const { alkupvm, loppupvm, otsikko } = req.body;
+
+    console.log(req.files);
 
     if (!req.files) ErrorHandler(400, 'Kuvatiedosto puuttuu');
     const haveParams = reqParams(
@@ -35,6 +37,7 @@ module.exports.uusiTarina = async (req, res, next) => {
       teksti,
       alkupvm,
       loppupvm,
+      otsikko,
       kuva: tarinaImgs,
     });
 
@@ -50,7 +53,10 @@ module.exports.uusiTarina = async (req, res, next) => {
 
 module.exports.kaikkiTarinat = async (req, res, next) => {
   try {
-    const tarinat = await Tarina.find({ yksityinen: false }).exec();
+    const tarinat = await Tarina.find({ yksityinen: false })
+      .populate('matkaaja', 'nimimerkki')
+      .select('otsikko teksti alkupvm loppupvm createdAt')
+      .exec();
 
     res.status(200).json({ tarinat });
   } catch (error) {
@@ -62,7 +68,10 @@ module.exports.tarinaID = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!id) return ErrorHandler(400, 'ID puuttuu');
-    const tarina = await Tarina.findById(id).exec();
+    const tarina = await Tarina.findById(id)
+      .select('otsikko teksti createdAt kuva lukukertoja ')
+      .populate('matkaaja', 'etunimi sukunimi kuva')
+      .exec();
 
     if (!tarina) return ErrorHandler(400, 'Virheellinen id');
 
@@ -81,14 +90,14 @@ module.exports.matkakohteenTarinat = async (req, res, next) => {
   try {
     const { matkakohdeID } = req.params;
     if (!matkakohdeID) return ErrorHandler(400, 'ID puuttuu');
-    const tarina = await Tarina.find({
+    const tarinat = await Tarina.find({
       matkakohde: matkakohdeID,
       yksityinen: false,
-    }).exec();
-
-    if (!tarina) return ErrorHandler(400, 'Virheellinen id');
-
-    res.status(200).json({ message: 'OK', tarina });
+    })
+      .populate('matkaaja', 'nimimerkki')
+      .select('otsikko teksti alkupvm loppupvm createdAt')
+      .exec();
+    res.status(200).json({ message: 'OK', tarinat });
   } catch (error) {
     next(error);
   }
@@ -97,7 +106,10 @@ module.exports.omatTarinat = async (req, res, next) => {
   try {
     const tarinat = await Tarina.find({
       matkaaja: req.userID,
-    }).exec();
+    })
+      .populate('matkaaja', 'nimimerkki')
+      .select('otsikko teksti alkupvm loppupvm createdAt')
+      .exec();
 
     res.status(200).json({ tarinat });
   } catch (error) {
