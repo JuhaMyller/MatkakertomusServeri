@@ -7,7 +7,9 @@ const { upload } = require('../utils/AWS_s3');
 module.exports.uusiTarina = async (req, res, next) => {
   try {
     const { matkakohde, yksityinen, teksti } = req.body;
-    const { alkupvm, loppupvm } = req.body;
+    const { alkupvm, loppupvm, otsikko } = req.body;
+
+    console.log(req.files);
 
     if (!req.files) ErrorHandler(400, 'Kuvatiedosto puuttuu');
     const haveParams = reqParams(
@@ -36,6 +38,7 @@ module.exports.uusiTarina = async (req, res, next) => {
       teksti,
       alkupvm,
       loppupvm,
+      otsikko,
       kuva: tarinaImgs,
     });
 
@@ -82,14 +85,14 @@ module.exports.matkakohteenTarinat = async (req, res, next) => {
   try {
     const { matkakohdeID } = req.params;
     if (!matkakohdeID) return ErrorHandler(400, 'ID puuttuu');
-    const tarina = await Tarina.find({
+    const tarinat = await Tarina.find({
       matkakohde: matkakohdeID,
       yksityinen: false,
-    }).exec();
-
-    if (!tarina) return ErrorHandler(400, 'Virheellinen id');
-
-    res.status(200).json({ message: 'OK', tarina });
+    })
+      .populate('matkaaja', 'nimimerkki')
+      .select('otsikko teksti alkupvm loppupvm createdAt')
+      .exec();
+    res.status(200).json({ message: 'OK', tarinat });
   } catch (error) {
     next(error);
   }
