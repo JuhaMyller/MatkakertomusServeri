@@ -54,7 +54,10 @@ module.exports.uusiTarina = async (req, res, next) => {
 
 module.exports.kaikkiTarinat = async (req, res, next) => {
   try {
-    const tarinat = await Tarina.find({ yksityinen: false }).exec();
+    const tarinat = await Tarina.find({ yksityinen: false })
+      .populate('matkaaja', 'nimimerkki')
+      .select('otsikko teksti alkupvm loppupvm createdAt')
+      .exec();
 
     res.status(200).json({ tarinat });
   } catch (error) {
