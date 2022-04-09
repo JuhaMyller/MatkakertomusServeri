@@ -12,15 +12,19 @@ const s3Client = new AWS.S3({
 //upload file to s3
 
 const upload = async (file) => {
-  const fileStream = fs.createReadStream(file.path);
+  try {
+    const fileStream = fs.createReadStream(file.path);
 
-  const params = {
-    Bucket: process.env.AWS_BUCKET_NAME,
-    Body: fileStream,
-    Key: file.filename,
-  };
-  await unlink(file.path);
-  return s3Client.upload(params).promise();
+    const params = {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Body: fileStream,
+      Key: file.filename,
+    };
+    await unlink(file.path);
+    return s3Client.upload(params).promise();
+  } catch (error) {
+    console.error(error);
+  }
 };
 
 //download a file from s3
