@@ -11,9 +11,15 @@ const s3Client = new AWS.S3({
 
 //upload file to s3
 
+//Herokussa ei voi käyttää tätä, localina toimii
+
 const upload = async (file) => {
   try {
     const fileStream = fs.createReadStream(file.path);
+    fileStream.on('error', function () {
+      console.log(file.path);
+      res.status(404).end();
+    });
 
     const params = {
       Bucket: process.env.AWS_BUCKET_NAME,
@@ -54,4 +60,4 @@ const deleteFile = (keys) => {
   return s3Client.deleteObjects(params).promise();
 };
 
-module.exports = { deleteFile, upload, getFileStream };
+module.exports = { deleteFile, upload, getFileStream, s3Client };
