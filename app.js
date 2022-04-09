@@ -5,7 +5,6 @@ const app = express();
 const requireAuth = require('./middleware/requireAuth');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-const path = require('path');
 
 const ErrorHandler = require('./middleware/errorHandler');
 const userRoutes = require('./Routes/userRoutes');
@@ -17,7 +16,6 @@ const { getFileStream } = require('./utils/AWS_s3');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'uploads')));
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 
 //http://localhost:4000/

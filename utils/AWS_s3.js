@@ -16,10 +16,6 @@ const s3Client = new AWS.S3({
 const upload = async (file) => {
   try {
     const fileStream = fs.createReadStream(file.path);
-    fileStream.on('error', function () {
-      console.log(file.path);
-      res.status(404).end();
-    });
 
     const params = {
       Bucket: process.env.AWS_BUCKET_NAME,
