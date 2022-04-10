@@ -54,6 +54,7 @@ module.exports.kaikkiTarinat = async (req, res, next) => {
     const tarinat = await Tarina.find({ yksityinen: false })
       .populate('matkaaja', 'nimimerkki')
       .select('otsikko teksti alkupvm loppupvm createdAt')
+      .sort({ createdAt: -1 })
       .exec();
 
     res.status(200).json({ tarinat });
@@ -78,6 +79,11 @@ module.exports.tarinaID = async (req, res, next) => {
         .status(400)
         .json({ message: 'Sinulla ei ole oikeutta katsoa tätä tarinaa' });
 
+    if (!tarina.lukukertoja?.includes(req.userID)) {
+      tarina.lukukertoja.push(req.userID);
+      await tarina.save();
+    }
+
     res.status(200).json({ message: 'OK', tarina });
   } catch (error) {
     next(error);
@@ -94,6 +100,7 @@ module.exports.matkakohteenTarinat = async (req, res, next) => {
     })
       .populate('matkaaja', 'nimimerkki')
       .select('otsikko teksti alkupvm loppupvm createdAt')
+      .sort({ createdAt: -1 })
       .exec();
     res.status(200).json({ message: 'OK', tarinat });
   } catch (error) {
@@ -107,6 +114,7 @@ module.exports.omatTarinat = async (req, res, next) => {
     })
       .populate('matkaaja', 'nimimerkki')
       .select('otsikko teksti alkupvm loppupvm createdAt')
+      .sort({ createdAt: -1 })
       .exec();
 
     res.status(200).json({ tarinat });
