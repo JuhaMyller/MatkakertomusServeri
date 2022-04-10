@@ -12,10 +12,12 @@ const TarinaSchema = mongoose.Schema(
       required: true,
       ref: 'Matkakohde',
     },
-    lukukertoja: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Matkaaja',
-    },
+    lukukertoja: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Matkaaja',
+      },
+    ],
     alkupvm: { type: Date, required: true },
     loppupvm: { type: Date, required: true },
     yksityinen: { type: Boolean, required: true, default: false },
