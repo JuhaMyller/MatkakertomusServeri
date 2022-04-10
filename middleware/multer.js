@@ -7,7 +7,8 @@ const storage = multer.diskStorage({
     cb(null, path.join('uploads'));
   },
   filename: function (req, file, cb) {
-    cb(null, 'image-' + uuidv4() + '.jpeg');
+    const baseURL = req.baseUrl.replaceAll('/', '_') + '_';
+    cb(null, baseURL + uuidv4() + '.jpeg');
   },
 });
 
