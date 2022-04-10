@@ -32,7 +32,7 @@ steps:
     publishWebProjects: true
 - task: AzureWebApp@1
   inputs:
-    azureSubscription: 'e7f44f34-65ec-42fe-982b-65832604f228'
+    azureSubscription: 'Azure subscription 1'
     appType: 'webAppLinux'
     appName: 'matkakertomus'
     package: '$(System.DefaultWorkingDirectory)/**/*.zip'
