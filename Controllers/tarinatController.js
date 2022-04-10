@@ -9,9 +9,7 @@ module.exports.uusiTarina = async (req, res, next) => {
     const { matkakohde, yksityinen, teksti } = req.body;
     const { alkupvm, loppupvm, otsikko } = req.body;
 
-    console.log(req.files);
-
-    if (!req.files) ErrorHandler(400, 'Kuvatiedosto puuttuu');
+    if (req.files.length === 0) ErrorHandler(400, 'Kuvatiedosto puuttuu');
     const haveParams = reqParams(
       { matkakohde, yksityinen, teksti, alkupvm, loppupvm },
       req.body
