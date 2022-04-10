@@ -5,11 +5,7 @@
 
 variables:
   buildConfiguration: 'Release'
-
-
-trigger:
-- main
-
+  
 pool:
   vmImage: ubuntu-latest
 
